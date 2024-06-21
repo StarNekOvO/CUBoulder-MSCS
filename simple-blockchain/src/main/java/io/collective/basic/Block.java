@@ -14,7 +14,7 @@ public class Block {
         this.previousHash = previousHash;
         this.timestamp = timestamp;
         this.nonce = nonce;
-        this.hash = null;
+        this.hash = calculatedHash();
     }
 
     public String getPreviousHash() {
@@ -34,14 +34,14 @@ public class Block {
     }
 
     public String calculatedHash() throws NoSuchAlgorithmException {
-        return null;
-    }
-
-    /// Supporting functions that you'll need.
-
-    static String calculateHash(String string) throws NoSuchAlgorithmException {
+        String data = previousHash + Long.toString(timestamp) + Integer.toString(nonce);
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        digest.update(string.getBytes());
-        return String.format("%064x", new BigInteger(1, digest.digest()));
+        byte[] hashBytes = digest.digest(data.getBytes());
+        BigInteger hashNum = new BigInteger(1, hashBytes);
+        StringBuilder hashString = new StringBuilder(hashNum.toString(16));
+        while (hashString.length() < 64) {
+            hashString.insert(0, "0");
+        }
+        return hashString.toString();
     }
 }
