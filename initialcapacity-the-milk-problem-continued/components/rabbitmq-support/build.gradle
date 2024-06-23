@@ -1,0 +1,7 @@
+version "1.0-SNAPSHOT"
+
+dependencies {
+    implementation project(":components:workflow-support")
+
+    implementation "com.rabbitmq:amqp-client:$rabbitmq_version"
+}
