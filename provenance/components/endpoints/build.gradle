@@ -10,4 +10,8 @@ dependencies {
     implementation project(":components:rest-support")
     implementation project(":components:rss-support")
     implementation project(":components:workflow-support")
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.12.5' // 根据实际版本调整
+    implementation project(":components:articles")
+    implementation project(":components:rest-support")
+    implementation project(":components:workflow-support")
 }

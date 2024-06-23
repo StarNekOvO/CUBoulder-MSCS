@@ -17,19 +17,15 @@ public class ArticlesController extends BasicHandler {
     }
 
     @Override
-    public void handle(String target, Request request, HttpServletRequest servletRequest, HttpServletResponse servletResponse) {
-        get("/articles", List.of("application/json", "text/html"), request, servletResponse, () -> {
-
-            { // todo - query the articles gateway for *all* articles, map record to infos, and send back a collection of article infos
-
-            }
+    public void handle(String target, Request baseRequest, HttpServletRequest request, HttpServletResponse response) {
+        get("/articles", List.of("application/json", "text/html"), baseRequest, response, () -> {
+            List<ArticleRecord> articles = gateway.findAll();
+            writeJsonBody(response, articles);
         });
 
-        get("/available", List.of("application/json"), request, servletResponse, () -> {
-
-            { // todo - query the articles gateway for *available* articles, map records to infos, and send back a collection of article infos
-
-            }
+        get("/available", List.of("application/json"), baseRequest, response, () -> {
+            List<ArticleRecord> availableArticles = gateway.findAvailable();
+            writeJsonBody(response, availableArticles);
         });
     }
 }

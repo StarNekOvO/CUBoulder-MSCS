@@ -1,5 +1,6 @@
 package io.collective.endpoints;
 
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import io.collective.articles.ArticleDataGateway;
 import io.collective.restsupport.RestTemplate;
 import io.collective.workflow.Worker;
@@ -30,8 +31,22 @@ public class EndpointWorker implements Worker<EndpointTask> {
         String response = template.get(task.getEndpoint(), task.getAccept());
         gateway.clear();
 
-        { // todo - map rss results to an article infos collection and save articles infos to the article gateway
+        try {
+            XmlMapper xmlMapper = new XmlMapper();
+            RSS rss = xmlMapper.readValue(response, RSS.class);
 
+            if (rss != null && rss.getChannel() != null && rss.getChannel().getItems() != null) {
+                rss.getChannel().getItems().forEach(item -> {
+                    String title = item.getTitle();
+                    if (title != null) {
+                        gateway.save(title);
+                    }
+                });
+            } else {
+                logger.error("RSS feed is missing required fields");
+            }
+        } catch (Exception e) {
+            logger.error("Error parsing or processing RSS response", e);
         }
     }
 }

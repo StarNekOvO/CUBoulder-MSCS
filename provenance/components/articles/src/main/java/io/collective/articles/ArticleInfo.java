@@ -1,10 +1,13 @@
 package io.collective.articles;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ArticleInfo {
     private int id;
     private String title;
 
-    private ArticleInfo() {
+    public ArticleInfo() {
     }
 
     public ArticleInfo(int id, String title) {
@@ -16,7 +19,15 @@ public class ArticleInfo {
         return id;
     }
 
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public String getTitle() {
         return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 }
