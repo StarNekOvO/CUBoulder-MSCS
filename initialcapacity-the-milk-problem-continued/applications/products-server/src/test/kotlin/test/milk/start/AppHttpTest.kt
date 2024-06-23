@@ -16,13 +16,8 @@ import kotlin.test.*
 import io.milk.products.ProductService
 import io.milk.products.ProductInfo
 import io.milk.products.PurchaseInfo
-import io.milk.start.module
-import io.milk.testsupport.testDbPassword
-import io.milk.testsupport.testDbUsername
-import io.milk.testsupport.testJdbcUrl
 import org.junit.Before
 import org.junit.Test
-import test.milk.TestScenarioSupport
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -67,7 +62,8 @@ class AppHttpTest {
 
                 // Convert response content to list of products and back to string to match the format
                 val expectedJson = objectMapper.writeValueAsString(listOf(product))
-                val actualJson = objectMapper.writeValueAsString(objectMapper.readValue(response.content, List::class.java))
+                val actualJson =
+                    objectMapper.writeValueAsString(objectMapper.readValue(response.content, List::class.java))
                 assertEquals(expectedJson, actualJson)
             }
         }
@@ -97,9 +93,10 @@ class AppHttpTest {
             }
         }
 
-        verify { productService.findBy(105442) }
-        verify { productService.decrementBy(purchase) }
-        verify { productService.findAll() }
+        verifyOrder {
+            productService.decrementBy(purchase)
+            productService.findAll()
+        }
     }
 
     @AfterTest

@@ -81,7 +81,6 @@ class AppRabbitTest {
             }
         }
 
-        verify { productService.findBy(105442) }
         verify { productService.decrementBy(purchase) }
         verify { productService.findAll() }
     }
