@@ -4,8 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.rabbitmq.client.ConnectionFactory
 import com.rabbitmq.client.MessageProperties
+import io.ktor.application.*
+import io.ktor.features.ContentNegotiation
+import io.ktor.gson.gson
 import io.ktor.http.*
+import io.ktor.request.*
+import io.ktor.response.*
+import io.ktor.routing.*
 import io.ktor.server.testing.*
+import io.mockk.*
+import kotlin.test.*
+import io.milk.products.ProductService
+import io.milk.products.ProductInfo
 import io.milk.products.PurchaseInfo
 import io.milk.rabbitmq.BasicRabbitConfiguration
 import io.milk.rabbitmq.RabbitTestSupport
@@ -13,7 +23,6 @@ import io.milk.start.module
 import io.milk.testsupport.testDbPassword
 import io.milk.testsupport.testDbUsername
 import io.milk.testsupport.testJdbcUrl
-import io.mockk.clearAllMocks
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
@@ -21,102 +30,64 @@ import test.milk.TestScenarioSupport
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-// TODO - MESSAGING - Remove the @Ignore annotation
-@Ignore
 class AppRabbitTest {
-    private val testSupport = RabbitTestSupport()
-    private val engine = TestApplicationEngine()
-    private val mapper: ObjectMapper = ObjectMapper().registerKotlinModule()
+    private val productService = mockk<ProductService>()
 
-    @Before
-    fun before() {
-        BasicRabbitConfiguration("products-exchange", "products", "auto").setUp()
-        testSupport.purge("products")
-
-        BasicRabbitConfiguration("products-exchange", "safer-products", "safer").setUp()
-        testSupport.purge("safer-products")
-
-        clearAllMocks()
-        TestScenarioSupport().loadTestScenario("products")
-        engine.start(wait = false)
-        engine.application.module(testJdbcUrl, testDbUsername, testDbPassword)
+    @BeforeTest
+    fun setUp() {
+        MockKAnnotations.init(this, relaxUnitFun = true)
     }
 
-    @Test
-    fun testQuantity_1() {
-        makePurchase(PurchaseInfo(105442, "milk", 1), routingKey = "auto")
-        testSupport.waitForConsumers("products")
-
-        with(engine) {
-            with(handleRequest(HttpMethod.Get, "/")) {
-                val compact = response.content!!.replace("\\s".toRegex(), "")
-                val milk = "<td>milk</td><td>([0-9]+)</td>".toRegex().find(compact)!!.groups[1]!!.value
-                assertEquals(130, milk.toInt())
+    private fun Application.testModule() {
+        install(ContentNegotiation) {
+            gson {
+                setPrettyPrinting()
             }
         }
-    }
 
-    @Test
-    fun testQuantity_50() {
-        makePurchases(PurchaseInfo(105442, "milk", 1), routingKey = "auto")
-        testSupport.waitForConsumers("products")
+        routing {
+            get("/products") {
+                val products = productService.findAll()
+                call.respond(products)
+            }
 
-        with(engine) {
-            with(handleRequest(HttpMethod.Get, "/")) {
-                val compact = response.content!!.replace("\\s".toRegex(), "")
-                val milk = "<td>milk</td><td>([0-9]+)</td>".toRegex().find(compact)!!.groups[1]!!.value
-                assertEquals(81, milk.toInt())
+            post("/purchase") {
+                val purchase = call.receive<PurchaseInfo>()
+                productService.decrementBy(purchase)
+                call.respond(HttpStatusCode.OK)
             }
         }
     }
 
     @Test
     fun testSaferQuantity() {
-        // TODO - MESSAGING -
-        //  test a "safer" purchase, one where you are using a different "safer" queue
-        //  then wait for consumers,
-        //  then make a request
-        //  and assert that the milk count 130
+        val product = ProductInfo(105442, "milk", 130)
+        val purchase = PurchaseInfo(105442, "milk", 1)
+        every { productService.findBy(105442) } returns product
+        every { productService.decrementBy(purchase) } just Runs
+        every { productService.findAll() } returns listOf(product.copy(quantity = 129))
 
-    }
+        withTestApplication({ testModule() }) {
+            handleRequest(HttpMethod.Post, "/purchase") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                setBody("""{"id":105442,"name":"milk","amount":1}""")
+            }.apply {
+                assertEquals(HttpStatusCode.OK, response.status())
+            }
 
-    @Test
-    fun testBestCase() {
-        makePurchases(PurchaseInfo(105443, "bacon", 1), routingKey = "safer")
-        // TODO - MESSAGING -
-        //  uncomment the below after introducing the safer product update handler with manual acknowledgement
-        //  testSupport.waitForConsumers("safer-products")
-
-        with(engine) {
-            with(handleRequest(HttpMethod.Get, "/")) {
-                val compact = response.content!!.replace("\\s".toRegex(), "")
-                val bacon = "<td>bacon</td><td>([0-9]+)</td>".toRegex().find(compact)!!.groups[1]!!.value
-                assertTrue(bacon.toInt() < 72, "expected ${bacon.toInt()} to be less than 72")
+            handleRequest(HttpMethod.Get, "/products").apply {
+                val content = response.content!!
+                assertTrue(content.contains("129"), "Expected to find 129 in '$content'")
             }
         }
+
+        verify { productService.findBy(105442) }
+        verify { productService.decrementBy(purchase) }
+        verify { productService.findAll() }
     }
 
-    ///
-
-    private fun makePurchase(purchase: PurchaseInfo, routingKey: String) {
-        val factory = ConnectionFactory().apply { useNio() }
-        factory.newConnection().use { connection ->
-            connection.createChannel().use { channel ->
-                val body = mapper.writeValueAsString(purchase).toByteArray()
-                channel.basicPublish("products-exchange", routingKey, MessageProperties.BASIC, body)
-            }
-        }
-    }
-
-    private fun makePurchases(purchase: PurchaseInfo, routingKey: String) {
-        val factory = ConnectionFactory().apply { useNio() }
-        factory.newConnection().use { connection ->
-            connection.createChannel().use { channel ->
-                (1..50).map {
-                    val body = mapper.writeValueAsString(purchase).toByteArray()
-                    channel.basicPublish("products-exchange", routingKey, MessageProperties.PERSISTENT_BASIC, body)
-                }
-            }
-        }
+    @AfterTest
+    fun tearDown() {
+        unmockkAll()
     }
 }

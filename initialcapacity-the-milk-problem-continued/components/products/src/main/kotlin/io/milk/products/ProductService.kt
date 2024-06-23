@@ -18,6 +18,8 @@ class ProductService(private val dataGateway: ProductDataGateway) {
     }
 
     fun decrementBy(purchase: PurchaseInfo) {
-        // TODO - DIRTY READS - Implement the decrementBy function.
+        val record = dataGateway.findBy(purchase.id)!!
+        record.quantity -= purchase.amount
+        dataGateway.update(record)
     }
 }

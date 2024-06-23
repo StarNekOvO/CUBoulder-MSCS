@@ -57,7 +57,7 @@ fun Application.module(jdbcUrl: String, username: String, password: String) {
                 purchase.id
             )
 
-            productService.update(purchase) // TODO - DIRTY READS - Replace with decrementBy. Why is using update problematic?
+            productService.decrementBy(purchase) // 使用decrementBy替换update
 
             call.respond(HttpStatusCode.Created)
         }
@@ -73,7 +73,18 @@ fun Application.module(jdbcUrl: String, username: String, password: String) {
         autoAck = true,
     ).start()
 
-    // TODO - MESSAGING -
+    BasicRabbitConfiguration(
+        exchange = "safer-products-exchange",
+        queue = "safer-products",
+        routingKey = "safer"
+    ).setUp()
+    BasicRabbitListener(
+        queue = "safer-products",
+        delivery = SaferProductUpdateHandler(productService),
+        cancel = ProductUpdateCancelHandler(),
+        autoAck = false, // 手动确认
+    ).start()
+
     //  set up the rabbit configuration for your safer queue and
     //  start the rabbit listener with the safer product update handler **with manual acknowledgement**
     //  this looks similar to the above invocation
@@ -85,7 +96,7 @@ fun main() {
     val port = System.getenv("PORT")?.toInt() ?: 8081
     val jdbcUrl = System.getenv("JDBC_DATABASE_URL")
     val username = System.getenv("JDBC_DATABASE_USERNAME")
-    val password = System.getenv("JDBC_DATABASE_USERNAME")
+    val password = System.getenv("JDBC_DATABASE_PASSWORD")
 
     embeddedServer(Jetty, port, module = { module(jdbcUrl, username, password) }).start()
 }

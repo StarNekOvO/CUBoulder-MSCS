@@ -48,6 +48,11 @@ class ProductServiceTest {
 
     @Test
     fun decrementBy() {
-        // TODO - DIRTY READS - Write the test for decrementBy.
+        val service = ProductService(ProductDataGateway(dataSource))
+        service.decrementBy(PurchaseInfo(101000, "milk", 2))
+
+        val product = service.findBy(101000)
+        assertEquals("milk", product.name)
+        assertEquals(40, product.quantity)
     }
 }

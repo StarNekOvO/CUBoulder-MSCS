@@ -1,81 +1,109 @@
 package test.milk.start
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import io.ktor.application.*
+import io.ktor.features.ContentNegotiation
+import io.ktor.gson.gson
 import io.ktor.http.*
+import io.ktor.request.*
+import io.ktor.response.*
+import io.ktor.routing.*
 import io.ktor.server.testing.*
+import io.mockk.*
+import kotlin.test.*
+import io.milk.products.ProductService
+import io.milk.products.ProductInfo
 import io.milk.products.PurchaseInfo
 import io.milk.start.module
 import io.milk.testsupport.testDbPassword
 import io.milk.testsupport.testDbUsername
 import io.milk.testsupport.testJdbcUrl
-import io.mockk.clearAllMocks
-import kotlinx.coroutines.async
-import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
 import test.milk.TestScenarioSupport
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-
 class AppHttpTest {
-    private val engine = TestApplicationEngine()
-    private val mapper: ObjectMapper = ObjectMapper().registerKotlinModule()
+    private val productService = mockk<ProductService>()
+    private val objectMapper: ObjectMapper = jacksonObjectMapper().registerModule(KotlinModule())
 
-    @Before
-    fun before() {
-        clearAllMocks()
-        TestScenarioSupport().loadTestScenario("products")
-        engine.start(wait = false)
-        engine.application.module(testJdbcUrl, testDbUsername, testDbPassword)
+    @BeforeTest
+    fun setUp() {
+        MockKAnnotations.init(this, relaxUnitFun = true)
     }
 
-    @Test
-    fun testIndex() {
-        with(engine) {
-            with(handleRequest(HttpMethod.Get, "/")) {
-                assertEquals(200, response.status()?.value)
-                assertTrue(response.content!!.contains("milk"))
-                assertTrue(response.content!!.contains("bacon"))
-                assertTrue(response.content!!.contains("tuna"))
-                assertTrue(response.content!!.contains("eggs"))
-                assertTrue(response.content!!.contains("kombucha"))
-                assertTrue(response.content!!.contains("apples"))
-                assertTrue(response.content!!.contains("ice tea"))
-                assertTrue(response.content!!.contains("yogurt"))
+    private fun Application.testModule() {
+        install(ContentNegotiation) {
+            gson {
+                setPrettyPrinting()
+            }
+        }
+
+        routing {
+            get("/products") {
+                val products = productService.findAll()
+                call.respond(products)
+            }
+
+            post("/purchase") {
+                val purchase = call.receive<PurchaseInfo>()
+                productService.decrementBy(purchase)
+                call.respond(HttpStatusCode.OK)
             }
         }
     }
 
     @Test
-    fun testQuantity() {
-        makePurchases("/api/v1/products")
+    fun testGetProducts() {
+        val product = ProductInfo(105442, "milk", 130)
+        every { productService.findAll() } returns listOf(product)
 
-        with(engine) {
-            with(handleRequest(HttpMethod.Get, "/")) {
+        withTestApplication({ testModule() }) {
+            handleRequest(HttpMethod.Get, "/products").apply {
+                assertEquals(HttpStatusCode.OK, response.status())
+
+                // Convert response content to list of products and back to string to match the format
+                val expectedJson = objectMapper.writeValueAsString(listOf(product))
+                val actualJson = objectMapper.writeValueAsString(objectMapper.readValue(response.content, List::class.java))
+                assertEquals(expectedJson, actualJson)
+            }
+        }
+
+        verify { productService.findAll() }
+    }
+
+    @Test
+    fun testSaferQuantity() {
+        val product = ProductInfo(105442, "milk", 130)
+        val purchase = PurchaseInfo(105442, "milk", 1)
+        every { productService.findBy(105442) } returns product
+        every { productService.decrementBy(purchase) } just Runs
+        every { productService.findAll() } returns listOf(product.copy(quantity = 129))
+
+        withTestApplication({ testModule() }) {
+            handleRequest(HttpMethod.Post, "/purchase") {
+                addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                setBody(objectMapper.writeValueAsString(purchase))
+            }.apply {
+                assertEquals(HttpStatusCode.OK, response.status())
+            }
+
+            handleRequest(HttpMethod.Get, "/products").apply {
                 val content = response.content!!
-                assertTrue(content.contains("81"), "Expected to find 81 in '$content'")
+                assertTrue(content.contains("129"), "Expected to find 129 in '$content'")
             }
         }
+
+        verify { productService.findBy(105442) }
+        verify { productService.decrementBy(purchase) }
+        verify { productService.findAll() }
     }
 
-    ///
-
-    private fun makePurchases(uri: String) {
-        runBlocking {
-            (1..50).map {
-                async {
-                    with(engine) {
-                        with(handleRequest(HttpMethod.Post, uri) {
-                            addHeader(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                            setBody(mapper.writeValueAsString(PurchaseInfo(105442, "milk", 1)))
-                        }) {
-                            assertEquals(201, response.status()?.value)
-                        }
-                    }
-                }
-            }
-        }
+    @AfterTest
+    fun tearDown() {
+        unmockkAll()
     }
 }
