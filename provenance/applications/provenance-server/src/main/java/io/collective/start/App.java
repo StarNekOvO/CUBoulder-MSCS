@@ -4,14 +4,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.collective.articles.ArticleDataGateway;
 import io.collective.articles.ArticleRecord;
 import io.collective.articles.ArticlesController;
+import io.collective.endpoints.*;
 import io.collective.restsupport.BasicApp;
 import io.collective.restsupport.NoopController;
+import io.collective.restsupport.RestTemplate;
+import io.collective.workflow.WorkScheduler;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.TimeZone;
-
 
 public class App extends BasicApp {
     private static ArticleDataGateway articleDataGateway = new ArticleDataGateway(List.of(
@@ -23,9 +25,15 @@ public class App extends BasicApp {
     public void start() {
         super.start();
 
-        { // todo - start the endpoint worker
+        // Create instances for the endpoint worker and scheduler
+        EndpointDataGateway endpointDataGateway = new EndpointDataGateway();
+        EndpointWorkFinder finder = new EndpointWorkFinder(endpointDataGateway);
+        EndpointWorker worker = new EndpointWorker(new RestTemplate(), articleDataGateway);
 
-        }
+        WorkScheduler<EndpointTask> scheduler = new WorkScheduler<>(finder, List.of(worker), 300);
+
+        // Start the scheduler
+        scheduler.start();
     }
 
     public App(int port) {
