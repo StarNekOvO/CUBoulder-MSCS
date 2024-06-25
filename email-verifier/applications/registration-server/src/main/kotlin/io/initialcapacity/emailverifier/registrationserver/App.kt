@@ -52,6 +52,10 @@ fun main(): Unit = runBlocking {
     val registrationNotificationQueue = RabbitQueue("registration-notification")
     connectionFactory.declareAndBind(exchange = registrationNotificationExchange, queue = registrationNotificationQueue, routingKey = "42")
 
+    // 定义一致性哈希对象
+    val nodes = listOf("Consumer1", "Consumer2", "Consumer3")
+    val consistentHash = ConsistentHash(3, nodes)
+
     val registrationRequestExchange = RabbitExchange(
         // 使用一致性哈希交换 (x-consistent-hash)
         name = "registration-request-exchange",

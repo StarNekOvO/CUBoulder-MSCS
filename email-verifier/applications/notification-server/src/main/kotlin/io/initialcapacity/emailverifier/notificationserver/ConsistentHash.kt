@@ -1,4 +1,4 @@
-package io.initialcapacity.emailverifier.hash
+package io.initialcapacity.emailverifier.notificationserver
 
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
