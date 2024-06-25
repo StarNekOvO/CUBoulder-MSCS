@@ -1,0 +1,10 @@
+env
+.env
+.idea
+__pycache__
+node_modules
+dist
+integration-tests/cypress/screenshots
+integration-tests/cypress/videos
+integration-tests/cypress/log
+*.pyc

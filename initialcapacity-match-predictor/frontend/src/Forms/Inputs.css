@@ -1,0 +1,54 @@
+input, select {
+    margin-top: .4rem;
+    margin-left: -.3rem;
+    padding: .3rem;
+
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--black);
+}
+
+input:not([type=checkbox]), select {
+    width: 100%;
+}
+
+input[type=checkbox] {
+    margin-right: .6rem;
+}
+
+label {
+    display: block;
+    margin-top: .6rem;
+    padding-left: .3rem;
+    margin-bottom: 2rem;
+
+    flex: 1;
+    font-size: .8rem;
+    font-weight: bold;
+    color: var(--accent);
+}
+
+legend {
+    font-weight: bold;
+    color: var(--accent);
+}
+
+fieldset {
+    display: flex;
+    gap: 1rem;
+}
+
+.versus {
+    font-weight: bold;
+    align-self: flex-end;
+    margin-bottom: .5rem;
+}
+
+label span:first-child {
+    position: absolute;
+    top: .5rem;
+    left: .3rem;
+    font-size: .8rem;
+    font-weight: bold;
+    color: var(--accent);
+}
