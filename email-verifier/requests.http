@@ -1,0 +1,20 @@
+POST http://localhost:8081/request-registration
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "test@example.com"
+}
+
+###
+
+POST http://localhost:8081/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "test@example.com",
+  "confirmationCode": "5e461a14-924d-4032-8c39-e1d639c1c6bc"
+}
+
+###

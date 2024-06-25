@@ -1,0 +1,26 @@
+version: '3'
+
+services:
+  postgres-api:
+    image: postgres:14.3
+    container_name: email-verifier-database
+    ports:
+      - '5555:5432'
+    environment:
+      POSTGRES_DB: 'registration_dev'
+      POSTGRES_USER: 'emailverifier'
+      POSTGRES_PASSWORD: 'emailverifier'
+      ADDITIONAL_POSTGRES_DBS: 'registration_test,notification_dev,notification_test'
+    volumes:
+      - ./databases/init-scripts:/docker-entrypoint-initdb.d
+      - ./.docker-data/.pg-data:/var/lib/postgresql/data
+  rabbitmq:
+    image: rabbitmq:3.10.5-management
+    container_name: email-verifier-rabbit
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    volumes:
+      - ./.docker-data/.rabbit-data:/var/lib/rabbitmq/
+      - ./.docker-data/.rabbit-log:/var/log/rabbitmq
+      - ./.rabbit-plugins:/etc/rabbitmq/enabled_plugins
