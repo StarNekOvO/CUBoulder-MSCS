@@ -37,6 +37,17 @@ fun main() = runBlocking {
     val dbConfig = DatabaseConfiguration(databaseUrl)
     val dbTemplate = DatabaseTemplate(dbConfig.db)
 
+    // 初始化一致性哈希
+    val nodes = listOf("Consumer1", "Consumer2", "Consumer3")
+    val consistentHash = ConsistentHash(3, nodes)
+
+    val messages = listOf("message1", "message2", "message3", "message4", "message5")
+    for (message in messages) {
+        val node = consistentHash.get(message)
+        println("Message [$message] is handled by node [$node]")
+        // 在此处添加处理消息的逻辑
+    }
+
     start(
         sendgridUrl = sendgridUrl,
         sendgridApiKey = sendgridApiKey,
