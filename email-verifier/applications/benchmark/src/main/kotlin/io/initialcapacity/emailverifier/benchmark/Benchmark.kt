@@ -18,7 +18,6 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.measureTime
 
-
 class Benchmark(
     private val registrationUrl: String,
     private val registrationCount: Int,
@@ -47,6 +46,17 @@ class Benchmark(
                 delay(100.milliseconds)
             }
         }.also { duration ->
+            val registrationsProcessed = metrics.counter("registration - total").count
+            val durationInSeconds = duration.inWholeSeconds
+            val registrationsPerSecond = registrationsProcessed / durationInSeconds
+
+            if (registrationsPerSecond < 50) {
+                logger.error("Failed to meet the business requirement: ${registrationsPerSecond} registrations per second")
+                throw RuntimeException("Benchmark test failed: Not meeting 50 registrations per second requirement")
+            } else {
+                logger.info("Benchmark test passed: ${registrationsPerSecond} registrations per second")
+            }
+
             stop()
             logger.info("benchmark finished in $duration")
         }
