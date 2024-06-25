@@ -52,21 +52,12 @@ fun main(): Unit = runBlocking {
     val registrationNotificationQueue = RabbitQueue("registration-notification")
     connectionFactory.declareAndBind(exchange = registrationNotificationExchange, queue = registrationNotificationQueue, routingKey = "42")
 
-    // 定义一致性哈希对象
-    val nodes = listOf("Consumer1", "Consumer2", "Consumer3")
-    val consistentHash = ConsistentHash(3, nodes)
-
     val registrationRequestExchange = RabbitExchange(
-        // 使用一致性哈希交换 (x-consistent-hash)
         name = "registration-request-exchange",
-        type = "x-consistent-hash",
-        // 计算基于消息内容的路由键
-        routingKeyGenerator = { message: String -> consistentHash.get(message).toString() },
+        type = "x-consistent-hash",  // 使用 x-consistent-hash 作为类型参数
+        routingKeyGenerator = { message: String -> message.hashCode().toString() },  // 根据消息内容计算路由密钥
     )
-    // 从环境变量读取队列名称
-    val registrationRequestQueueName = System.getenv("REGISTRATION_REQUEST_QUEUE") ?: "registration-request"
-    val registrationRequestQueue = RabbitQueue(registrationRequestQueueName)
-    // 从环境变量读取路由键
+    val registrationRequestQueue = RabbitQueue(System.getenv("REGISTRATION_REQUEST_QUEUE") ?: "registration-request")
     val routingKey = System.getenv("ROUTING_KEY") ?: "42"
     connectionFactory.declareAndBind(exchange = registrationRequestExchange, queue = registrationRequestQueue, routingKey = routingKey)
 
