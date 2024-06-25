@@ -14,6 +14,8 @@ from matchpredictor.predictors.home_predictor import HomePredictor
 from matchpredictor.predictors.linear_regression_predictor import train_regression_predictor
 from matchpredictor.predictors.past_results_predictor import train_results_predictor
 from matchpredictor.predictors.simulation_predictor import train_offense_and_defense_predictor, train_offense_predictor
+from matchpredictor.predictors.alphabetical_predictor import AlphabeticalPredictor
+from matchpredictor.predictors.advanced_predictor import AdvancedPredictor
 from matchpredictor.teams.teams_api import teams_api
 from matchpredictor.teams.teams_provider import TeamsProvider
 from matchpredictor.upcominggames.football_data_api_client import FootballDataApiClient
@@ -28,6 +30,8 @@ def build_model_provider(training_data: List[Result]) -> ModelProvider:
         Model("Offense simulator", train_offense_predictor(training_data, 10_000)),
         Model("Full simulator (fast)", train_offense_and_defense_predictor(training_data, 1_000)),
         Model("Full simulator", train_offense_and_defense_predictor(training_data, 10_000)),
+        Model("Alphabetical", AlphabeticalPredictor()),  # 字母模型
+        Model("Advanced", AdvancedPredictor(training_data))  # 新的高级模型
         # The linear regression model uses scikit learn, so can cause issues on some machines
         # Model("Linear regression", train_regression_predictor(training_data))
     ])

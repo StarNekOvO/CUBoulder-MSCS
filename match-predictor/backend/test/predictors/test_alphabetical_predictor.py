@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from matchpredictor.matchresults.result import Team, Fixture, Outcome
-from test.predictors.alphabetical_predictor import AlphabeticalPredictor
+from matchpredictor.predictors.alphabetical_predictor import AlphabeticalPredictor
 
 
 class TestAlphabeticalPredictor(TestCase):
