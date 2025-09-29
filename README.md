@@ -18,3 +18,6 @@ https://starneko.com/categories/CU-Boulder/MS-CS/
 ### CSCA5028-bigdata-applications
 - `CSCA5028-bigdata-applications/provenance`
 - `CSCA5028-bigdata-applications/match-predictor`
+
+### CSCA5303-security-ethical-hacking
+- `CSCA5303-security-ethical-hacking/`
