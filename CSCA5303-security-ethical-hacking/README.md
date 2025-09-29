@@ -2,7 +2,14 @@
 Attacking the Network
 
 Session
-OEE: August 25 - October 17
+- OEE: August 25 - October 17
+- Fall 2025
 
-Structure
-- Place labs/projects under this directory.
+Instructor
+- Ahmed Hamza
+
+Type
+- Lecture
+
+Credits
+- 1
